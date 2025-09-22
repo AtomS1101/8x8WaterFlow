@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# v0.0.5
 
 from setting import Setting
 from random import randint
@@ -35,7 +34,18 @@ class Particle:
 					if (isVacant):
 						self.matrix[1][newY][newX] = True
 					else:
-						self.matrix[1][y][x] = True # Stay there
+						r = randint(0, 10)
+						if (r == 0):
+							randDirect = -2
+						elif (r == 1):
+							randDirect = 2
+						else:
+							randDirect = 0
+						isVacant, newX, newY = self.checkVacant(x, y, i+randDirect)
+						if (isVacant):
+							self.matrix[1][newY][newX] = True
+						else:
+							self.matrix[1][y][x] = True # Stay there
 				break
 
 		if (not flag):
@@ -48,8 +58,18 @@ class Particle:
 				if (isVacant):
 					self.matrix[1][newY][newX] = True
 				else:
-					self.matrix[1][y][x] = True # Stay there
-
+					r = randint(0, 10)
+					if (r == 0):
+						randDirect = -2
+					elif (r == 1):
+						randDirect = 2
+					else:
+						randDirect = 0
+					isVacant, newX, newY = self.checkVacant(x, y, 7+randDirect)
+					if (isVacant):
+						self.matrix[1][newY][newX] = True
+					else:
+						self.matrix[1][y][x] = True # Stay there
 
 if __name__ == "__main__":
 	matrix = [[[False] * Setting.size for _ in range(Setting.size)] for _ in range(2)]
