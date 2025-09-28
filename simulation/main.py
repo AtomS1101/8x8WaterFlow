@@ -19,8 +19,7 @@ def main():
 			matrix.shift()
 			matrix.show()
 			time.sleep(0.05)
-			# time.sleep(0.07)
-		angle += 2
+		angle += 11
 		if angle >= 360:
 			angle = 0
 

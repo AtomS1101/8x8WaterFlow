@@ -10,10 +10,10 @@ class Matrix:
 
 	def setArray(self):
 		# Fill an array with particles
-		yAxis = Setting.particles // 8
-		xAxis = Setting.particles % 8
+		yAxis = Setting.particles // Setting.size
+		xAxis = Setting.particles % Setting.size
 		for y in range(yAxis):
-			self.array[0][y] = [True] * 8
+			self.array[0][y] = [True] * Setting.size
 		for x in range(xAxis):
 			self.array[0][yAxis][x] = True
 

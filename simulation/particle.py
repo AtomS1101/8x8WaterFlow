@@ -8,7 +8,7 @@ class Particle:
 		self.matrix = matrix
 		self.angle = angle
 
-	def checkVacant(self, x, y, index):
+	def isVacant(self, x, y, index):
 		directionX = [1, 1,  1,  0, -1, -1, -1, 0]
 		directionY = [1, 0, -1, -1, -1,  0,  1, 1]
 		index = index - 8 if (index >= 8) else index
@@ -22,54 +22,55 @@ class Particle:
 	def move(self, x, y):
 		step = [int(45 * n + 22.5) for n in range(8)]
 		flag = False
+		# Calculate one by one for PIC optimization
 		for i in range(len(step) - 1):
 			if (self.angle >= step[i] and self.angle < step[i + 1]):
 				flag = True
-				isVacant, newX, newY = self.checkVacant(x, y, i)
+				# ===========================================
+				isVacant, newX, newY = self.isVacant(x, y, i)
 				if (isVacant): # Simply move if it's vacnt
 					self.matrix[1][newY][newX] = True
-				else:
-					randDirect = -1 if (randint(0, 1) == 0) else 1
-					isVacant, newX, newY = self.checkVacant(x, y, i+randDirect)
-					if (isVacant):
-						self.matrix[1][newY][newX] = True
-					else:
-						r = randint(0, 10)
-						if (r == 0):
-							randDirect = -2
-						elif (r == 1):
-							randDirect = 2
-						else:
-							randDirect = 0
-						isVacant, newX, newY = self.checkVacant(x, y, i+randDirect)
-						if (isVacant):
-							self.matrix[1][newY][newX] = True
-						else:
-							self.matrix[1][y][x] = True # Stay there
+					return
+				# ===========================================
+				randDirect = -1 if (randint(0, 1) == 0) else 1
+				isVacant, newX, newY = self.isVacant(x, y, i+randDirect)
+				if (isVacant):
+					self.matrix[1][newY][newX] = True
+					return
+				# ===========================================
+				r = randint(0, Setting.viscous)
+				randDirect = -2 if (r == 0) else 2 if (r == 1) else 0
+				isVacant, newX, newY = self.isVacant(x, y, i+randDirect)
+				if (isVacant):
+					self.matrix[1][newY][newX] = True
+					return
+				# ===========================================
+				#　default
+				self.matrix[1][y][x] = True # Stay there
 				break
 
 		if (not flag):
-			isVacant, newX, newY = self.checkVacant(x, y, 7)
+			# ===========================================
+			isVacant, newX, newY = self.isVacant(x, y, 7)
 			if (isVacant): # Simply move if it's vacnt
 				self.matrix[1][newY][newX] = True
-			else:
-				randDirect = -1 if (randint(0, 1) == 0) else 1
-				isVacant, newX, newY = self.checkVacant(x, y, 7+randDirect)
-				if (isVacant):
-					self.matrix[1][newY][newX] = True
-				else:
-					r = randint(0, 10)
-					if (r == 0):
-						randDirect = -2
-					elif (r == 1):
-						randDirect = 2
-					else:
-						randDirect = 0
-					isVacant, newX, newY = self.checkVacant(x, y, 7+randDirect)
-					if (isVacant):
-						self.matrix[1][newY][newX] = True
-					else:
-						self.matrix[1][y][x] = True # Stay there
+				return
+			# ===========================================
+			randDirect = -1 if (randint(0, 1) == 0) else 1
+			isVacant, newX, newY = self.isVacant(x, y, 7+randDirect)
+			if (isVacant):
+				self.matrix[1][newY][newX] = True
+				return
+			# ===========================================
+			r = randint(0, Setting.viscous)
+			randDirect = -2 if (r == 0) else 2 if (r == 1) else 0
+			isVacant, newX, newY = self.isVacant(x, y, 7+randDirect)
+			if (isVacant):
+				self.matrix[1][newY][newX] = True
+				return
+			# ===========================================
+			# default
+			self.matrix[1][y][x] = True # Stay there
 
 if __name__ == "__main__":
 	matrix = [[[False] * Setting.size for _ in range(Setting.size)] for _ in range(2)]

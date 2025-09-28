@@ -2,4 +2,5 @@
 
 class Setting:
 	size = 8
-	particles = 30
+	particles = 20
+	viscous = 50
