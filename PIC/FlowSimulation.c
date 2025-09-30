@@ -42,8 +42,8 @@
 #pragma config BORV   = HI      // ????????????(2.5V)??(HI)
 #pragma config LVP    = OFF     // ?????????????????(OFF)
 
-#define _XTAL_FREQ  8000000 // delay 8MHz
-//#define _XTAL_FREQ 16000000 // delay 16MHz
+// #define _XTAL_FREQ  8000000 // delay 8MHz
+#define _XTAL_FREQ 16000000 // delay 16MHz
 
 
 // =======================================================================
@@ -62,27 +62,21 @@ void updateScreen() {
 		// Set Anode
 		for (unsigned char i=0; i<8; i++) {
 			RA6 = 1;  // Shift CLK HIGH
-			NOP();
-			RA1 = (row >> (7 - i)) & 1;
+			RA1 = (matrix[0][row] >> (7 - i)) & 1;
 			RA6 = 0;  // Shift CLK LOW
-			NOP();
 		}
 		RA6 = 1;
 		RA6 = 0;
 		// Shift Cathode
 		RB7 = 1; // Shift CLK HIGH
-		NOP();
 		RA0 = (row == 7) ? 0 : 1;
 		RB7 = 0; // Shift CLK LOW
-		NOP();
 		// Latch
 		RB6 = 0; // U2 Latch LOW
 		RB5 = 0; // U3 Latch LOW
-		NOP();
 		RB6 = 1; // U2 Latch HIGH
 		RB5 = 1; // U3 Latch HIGH
-		NOP();
-		__delay_ms(2);
+		__delay_ms(1);
 	}
 }
 
@@ -188,8 +182,8 @@ void setMatrix() {
 }
 
 void setup() {
-	OSCCON = 0b01110010;   // Make clock 8MHz
-	// OSCCON = 0b01111010;   // Make clock 16MHz
+	// OSCCON = 0b01110010;   // Make clock 8MHz
+	OSCCON = 0b01111010;   // Make clock 16MHz
 	ANSELA = 0b00000000;   // Set all pins digital
 	TRISA  = 0b00000000;   // 0 -> OUTPUT/ 1 -> INPUT (RA5 INPUT only)
 	PORTA  = 0b00000000;   // Write all A pins LOW
@@ -223,7 +217,7 @@ void main(void) {
 			refresh(angle);
 			shiftBuffer();
 			updateScreen();
-			__delay_ms(20);
+			__delay_ms(1);
 		}
 		angle += 3;
 		if (angle >= 360) {
