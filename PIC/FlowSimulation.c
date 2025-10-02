@@ -7,21 +7,20 @@
 
 /*
 [PIN Info]
-            |~~~~~U~~~~~|
-    RA2    =| 1       18|= RA1
-    RA3    =| 2       17|= RA0
-    RA4    =| 3       16|= RA7
-    RA5    =| 4       15|= RA6
-    VSS    =| 5       14|= VDD
-    RB0    =| 6       13|= RB7
-    RB1    =| 7       12|= RB6
-    RB2    =| 8       11|= RB5
-    RB3    =| 9       10|= RB4
-            ~~~~~~~~~~~~~
+         |~~~~~U~~~~~|
+    RA2 =|1        18|= RA1
+    RA3 =|2        17|= RA0
+    RA4 =|3        16|= RA7
+    RA5 =|4        15|= RA6
+    VSS =|5        14|= VDD
+    RB0 =|6        13|= RB7
+    RB1 =|7        12|= RB6
+    RB2 =|8        11|= RB5
+    RB3 =|9        10|= RB4
+         |~~~~~~~~~~~|
 */
 
 #include <xc.h>
-#include <stdlib.h>
 
 // ???????????1???
 #pragma config FOSC  = INTOSC   // ???????????(INTOSC)
@@ -54,8 +53,19 @@
 
 #define TRUE 1
 #define FALSE 0
+#define LATCH() RB6 = 0; RB5 = 0; RB6 = 1; RB5 = 1
+#define FIT(value, low, high) (value < low) ? low : (value > high) ? high : value
+#define WRITE(byte, x, y) byte[y] |= (1 << x)
 
 unsigned char matrix[2][8];
+unsigned char randomByte = 0xAA;
+
+unsigned char fastRandom() {
+	randomByte ^= randomByte << 3;
+	randomByte ^= randomByte >> 5;
+	randomByte ^= randomByte << 1;
+	return randomByte;
+}
 
 void updateScreen() {
 	for (unsigned char row=0; row<8; row++){
@@ -71,29 +81,24 @@ void updateScreen() {
 		RB7 = 1; // Shift CLK HIGH
 		RA0 = (row == 7) ? 0 : 1;
 		RB7 = 0; // Shift CLK LOW
-		// Latch
-		RB6 = 0; // U2 Latch LOW
-		RB5 = 0; // U3 Latch LOW
-		RB6 = 1; // U2 Latch HIGH
-		RB5 = 1; // U3 Latch HIGH
+		LATCH();
 		__delay_ms(1);
 	}
 }
 
-
 void isVacant(signed char *newX, signed char *newY, unsigned char *vacant, signed char index){
 	const signed char directionX[] = {1, 1,  1,  0, -1, -1, -1, 0};
 	const signed char directionY[] = {1, 0, -1, -1, -1,  0,  1, 1};
-	index = index >= 8 ? index - 8 : index;
+	index &= 7;
 	*newX += directionX[index];
 	*newY += directionY[index];
-	*newX = *newX < 0 ? 0 : *newX >= SIZE ? SIZE - 1 : *newX;
-	*newY = *newY < 0 ? 0 : *newY >= SIZE ? SIZE - 1 : *newY;
+	*newX = FIT(*newX, 0, SIZE - 1);
+	*newY = FIT(*newY, 0, SIZE - 1);
 	*vacant = (matrix[0][*newY] & (1 << *newX)) == 0 && (matrix[1][*newY] & (1 << *newX)) == 0;
 }
 
 void moveParticle(const unsigned char x, const unsigned char y, const unsigned int angle) {
-	unsigned int steps[] = {22, 67, 112, 157, 202, 247, 292, 337};
+	const unsigned int steps[] = {22, 67, 112, 157, 202, 247, 292, 337};
 	unsigned char flag = FALSE;
 	for (signed char i=0; i<7; i++) {
 		if (angle >= steps[i] && angle < steps[i + 1]) {
@@ -104,23 +109,23 @@ void moveParticle(const unsigned char x, const unsigned char y, const unsigned i
 			newX = (signed char)x;
 			newY = (signed char)y;
 			isVacant(&newX, &newY, &vacant, i);
-			if (vacant) { matrix[1][newY] |= (1 << newX); return; }
+			if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 			newX = (signed char)x; // Reset position
 			newY = (signed char)y;
-			signed char randomDirect = rand() % 2 == 0 ? 1 : -1;
+			signed char randomDirect = (fastRandom() & 1) == 0 ? 1 : -1;
 			isVacant(&newX, &newY, &vacant, i + randomDirect);
-			if (vacant) { matrix[1][newY] |= (1 << newX); return; }
+			if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 			newX = (signed char)x; // Reset position
 			newY = (signed char)y;
-			unsigned char randomNum = (unsigned char)(rand() % VISCOUS);
+			unsigned char randomNum = (unsigned char)(fastRandom() % VISCOUS);
 			randomDirect = randomNum == 0 ? -2 : randomNum == 1 ? 2 : 0;
 			isVacant(&newX, &newY, &vacant, i + randomDirect);
-			if (vacant) { matrix[1][newY] |= (1 << newX); return; }
+			if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 			// Default
-			matrix[1][y] |= (1 << x);
+			WRITE(matrix[1], x, y);
 			break;
 		}
 	}
@@ -132,23 +137,23 @@ void moveParticle(const unsigned char x, const unsigned char y, const unsigned i
 		newX = (signed char)x;
 		newY = (signed char)y;
 		isVacant(&newX, &newY, &vacant, 7);
-		if (vacant) { matrix[1][newY] |= (1 << newX); return; }
+		if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 		newX = (signed char)x; // Reset position
 		newY = (signed char)y;
-		signed char randomDirect = rand() % 2 == 0 ? 1 : -1;
+		signed char randomDirect = (fastRandom() & 1) == 0 ? 1 : -1;
 		isVacant(&newX, &newY, &vacant, 7 + randomDirect);
-		if (vacant) { matrix[1][newY] |= (1 << newX); return; }
+		if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 		newX = (signed char)x; // Reset position
 		newY = (signed char)y;
-		unsigned char randomNum = (unsigned char)(rand() % VISCOUS);
+		unsigned char randomNum = (unsigned char)(fastRandom() % VISCOUS);
 		randomDirect = randomNum == 0 ? -2 : randomNum == 1 ? 2 : 0;
 		isVacant(&newX, &newY, &vacant, 7 + randomDirect);
-		if (vacant) { matrix[1][newY] |= (1 << newX); return; }
+		if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 		// Default
-		matrix[1][y] |= (1 << x);
+		WRITE(matrix[1], x ,y);
 	}
 }
 
@@ -178,7 +183,7 @@ void setMatrix() {
 		matrix[1][i] = 0b00000000;
 	}
 	for (unsigned char y=0; y<yAxis; y++) { matrix[0][y] = 0b11111111; }
-	for (unsigned char x=0; x<xAxis; x++) { matrix[0][yAxis] |= (1 << x); }
+	for (unsigned char x=0; x<xAxis; x++) { WRITE(matrix[0], x, yAxis); }
 }
 
 void setup() {
