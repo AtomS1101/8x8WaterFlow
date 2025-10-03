@@ -41,9 +41,7 @@
 #pragma config BORV   = HI      // ????????????(2.5V)??(HI)
 #pragma config LVP    = OFF     // ?????????????????(OFF)
 
-// #define _XTAL_FREQ  8000000 // delay 8MHz
 #define _XTAL_FREQ 16000000 // delay 16MHz
-
 
 // =======================================================================
 
@@ -51,13 +49,18 @@
 #define PARTICLE 30
 #define VISCOUS 50
 
+#define SET_ANODE_SHIFT(value)   RA6 = value
+#define SET_CATHODE_SHIFT(value) RB7 = value
+#define SET_ANODE_SER(value)     RA1 = value
+#define SET_CATHODE_SER(value)   RA0 = value
+#define LATCH_ALL() RB6 = 0; RB5 = 0; RB6 = 1; RB5 = 1
+
 #define TRUE 1
 #define FALSE 0
-#define LATCH() RB6 = 0; RB5 = 0; RB6 = 1; RB5 = 1
 #define FIT(value, low, high) (value < low) ? low : (value > high) ? high : value
 #define WRITE(byte, x, y) byte[y] |= (1 << x)
 
-unsigned char matrix[2][8];
+unsigned char matrix[2][SIZE];
 unsigned char randomByte = 0xAA;
 
 unsigned char fastRandom() {
@@ -68,20 +71,20 @@ unsigned char fastRandom() {
 }
 
 void updateScreen() {
-	for (unsigned char row=0; row<8; row++){
+	for (unsigned char row=0; row<SIZE; row++){
 		// Set Anode
-		for (unsigned char i=0; i<8; i++) {
-			RA6 = 1;  // Shift CLK HIGH
-			RA1 = (matrix[0][row] >> (7 - i)) & 1;
-			RA6 = 0;  // Shift CLK LOW
+		for (unsigned char i=0; i<SIZE; i++) {
+			SET_ANODE_SHIFT(1);
+			SET_ANODE_SHIFT((matrix[0][row] >> (7 - i)) & 1);
+			SET_ANODE_SHIFT(0);
 		}
-		RA6 = 1;
-		RA6 = 0;
-		// Shift Cathode
-		RB7 = 1; // Shift CLK HIGH
-		RA0 = (row == 7) ? 0 : 1;
-		RB7 = 0; // Shift CLK LOW
-		LATCH();
+		SET_ANODE_SHIFT(1); // Adjust to 8bit
+		SET_ANODE_SHIFT(0); // Adjust to 8bit
+
+		SET_CATHODE_SHIFT(1);
+		SET_CATHODE_SER(row != 7); // Return 0 if row == 7
+		SET_CATHODE_SHIFT(0);
+		LATCH_ALL();
 		__delay_ms(1);
 	}
 }
@@ -89,7 +92,7 @@ void updateScreen() {
 void isVacant(signed char *newX, signed char *newY, unsigned char *vacant, signed char index){
 	const signed char directionX[] = {1, 1,  1,  0, -1, -1, -1, 0};
 	const signed char directionY[] = {1, 0, -1, -1, -1,  0,  1, 1};
-	index &= 7;
+	index &= 7; // Ensure index is within 0 to 7
 	*newX += directionX[index];
 	*newY += directionY[index];
 	*newX = FIT(*newX, 0, SIZE - 1);
@@ -98,69 +101,63 @@ void isVacant(signed char *newX, signed char *newY, unsigned char *vacant, signe
 }
 
 void moveParticle(const unsigned char x, const unsigned char y, const unsigned int angle) {
-	const unsigned int steps[] = {22, 67, 112, 157, 202, 247, 292, 337};
-	unsigned char flag = FALSE;
+	const unsigned int angleSteps[] = {22, 67, 112, 157, 202, 247, 292, 337};
+	unsigned char flag = TRUE;
 	for (signed char i=0; i<7; i++) {
-		if (angle >= steps[i] && angle < steps[i + 1]) {
-			flag = TRUE;
+		if (angle >= angleSteps[i] && angle < angleSteps[i + 1]) {
+			flag = FALSE;
 			signed char newX, newY;
 			unsigned char vacant;
 
-			newX = (signed char)x;
-			newY = (signed char)y;
+			newX = (signed char)x; newY = (signed char)y;
 			isVacant(&newX, &newY, &vacant, i);
 			if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
-			newX = (signed char)x; // Reset position
-			newY = (signed char)y;
-			signed char randomDirect = (fastRandom() & 1) == 0 ? 1 : -1;
+			newX = (signed char)x; newY = (signed char)y; // Reset position
+			signed char randomDirect = (fastRandom() & 1) * 2 - 1; // Gives -1 or 1
 			isVacant(&newX, &newY, &vacant, i + randomDirect);
 			if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
-			newX = (signed char)x; // Reset position
-			newY = (signed char)y;
+			newX = (signed char)x; newY = (signed char)y; // Reset position
 			unsigned char randomNum = (unsigned char)(fastRandom() % VISCOUS);
 			randomDirect = randomNum == 0 ? -2 : randomNum == 1 ? 2 : 0;
 			isVacant(&newX, &newY, &vacant, i + randomDirect);
 			if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 			// Default
-			WRITE(matrix[1], x, y);
+			WRITE(matrix[1], x, y); // Stay there
 			break;
 		}
 	}
 
-	if (!flag) {
+	if (flag) {
 		signed char newX, newY;
 		unsigned char vacant;
 
-		newX = (signed char)x;
-		newY = (signed char)y;
+		newX = (signed char)x; newY = (signed char)y;
 		isVacant(&newX, &newY, &vacant, 7);
 		if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
-		newX = (signed char)x; // Reset position
-		newY = (signed char)y;
-		signed char randomDirect = (fastRandom() & 1) == 0 ? 1 : -1;
+		newX = (signed char)x; newY = (signed char)y; // Reset position
+		signed char randomDirect = (fastRandom() & 1) * 2 - 1; // Gives -1 or 1
 		isVacant(&newX, &newY, &vacant, 7 + randomDirect);
 		if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
-		newX = (signed char)x; // Reset position
-		newY = (signed char)y;
+		newX = (signed char)x; newY = (signed char)y; // Reset position
 		unsigned char randomNum = (unsigned char)(fastRandom() % VISCOUS);
 		randomDirect = randomNum == 0 ? -2 : randomNum == 1 ? 2 : 0;
 		isVacant(&newX, &newY, &vacant, 7 + randomDirect);
 		if (vacant) { WRITE(matrix[1], newX, newY); return; }
 
 		// Default
-		WRITE(matrix[1], x ,y);
+		WRITE(matrix[1], x ,y); // Stay there
 	}
 }
 
 inline void shiftBuffer() {
 	for (unsigned char i=0; i<SIZE; i++) {
 		matrix[0][i] = matrix[1][i]; // Shift
-		matrix[1][i] = 0b00000000;   // Clear
+		matrix[1][i] = 0b00000000;   // Clear second buffer
 	}
 }
 
@@ -187,7 +184,6 @@ void setMatrix() {
 }
 
 void setup() {
-	// OSCCON = 0b01110010;   // Make clock 8MHz
 	OSCCON = 0b01111010;   // Make clock 16MHz
 	ANSELA = 0b00000000;   // Set all pins digital
 	TRISA  = 0b00000000;   // 0 -> OUTPUT/ 1 -> INPUT (RA5 INPUT only)
@@ -201,15 +197,6 @@ void setup() {
 	RB7 = 0; // U3 SRCLK
 	RB6 = 0; // U2 RCLK
 	RB5 = 0; // U3 RCLK
-
-	// Fill with HIGH
-	for (unsigned char i=0; i<8; i++) {
-		RB7 = 1; // Shift CLK HIGH
-		RB7 = 0; // Shift CLK LOW
-	}
-	RB5 = 0; // Latch LOW
-	RB5 = 1; // Latch HIGH
-	RB5 = 0; // Latch LOW
 }
 
 void main(void) {
@@ -225,8 +212,6 @@ void main(void) {
 			__delay_ms(1);
 		}
 		angle += 3;
-		if (angle >= 360) {
-			angle = 0;
-		}
+		if (angle >= 360) { angle = 0; }
 	}
 }
