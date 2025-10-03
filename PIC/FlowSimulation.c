@@ -75,7 +75,7 @@ void updateScreen() {
 		// Set Anode
 		for (unsigned char i=0; i<SIZE; i++) {
 			SET_ANODE_SHIFT(1);
-			SET_ANODE_SHIFT((matrix[0][row] >> (7 - i)) & 1);
+			SET_ANODE_SER((matrix[0][row] >> (7 - i)) & 1);
 			SET_ANODE_SHIFT(0);
 		}
 		SET_ANODE_SHIFT(1); // Adjust to 8bit
@@ -184,12 +184,12 @@ void setMatrix() {
 }
 
 void setup() {
-	OSCCON = 0b01111010;   // Make clock 16MHz
-	ANSELA = 0b00000000;   // Set all pins digital
-	TRISA  = 0b00000000;   // 0 -> OUTPUT/ 1 -> INPUT (RA5 INPUT only)
-	PORTA  = 0b00000000;   // Write all A pins LOW
-	TRISB  = 0b00000000;   // 0 -> OUTPUT/ 1 -> INPUT
-	PORTB  = 0b00000000;   // Write all B pins LOW
+	OSCCON = 0b01111010; // Make clock 16MHz
+	ANSELA = 0b00000000; // Set all pins digital
+	TRISA  = 0b00000000; // 0 -> OUTPUT/ 1 -> INPUT (RA5 INPUT only)
+	PORTA  = 0b00000000; // Write all A pins LOW
+	TRISB  = 0b00000000; // 0 -> OUTPUT/ 1 -> INPUT
+	PORTB  = 0b00000000; // Write all B pins LOW
 
 	RA1 = 0; // U2 SER
 	RA0 = 1; // U3 SER
